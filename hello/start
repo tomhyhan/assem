@@ -1,4 +1,4 @@
 #!/bin/bash
 
 cl65 -o file.prg -u __EXEHDR__ -t c64 -C c64-asm.cfg $1
-
+# cl65 -o file.prg -u __EXEHDR__ -g -d -Ln hello.lbl -t c64 -C c64-asm.cfg hello.s

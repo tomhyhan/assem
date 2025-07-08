@@ -1,5 +1,9 @@
 ## C64 KERNAL ROUTINES
-clear_screen = $FF5B, $FF81
+clear_screen: $FF5B, $FF81
+SETLFS(set file parameters): $FFBA
+SETNAM(set filename): $FFBD
+OPEN(open a file): $FFC0
+CLOSE(close a file): $FFC3
 
 ## COMMANDS
 *** compile example ***
@@ -32,15 +36,27 @@ heap
 $400: start of screen
 
 ## DEBUG
+```text
 ll "hello.lbl"
 bk .main
 g .main
 z (step)
 n (next)
 m (memory map)
+```
 
 ## TODO
-1. use pointers to print out hello world
-  - dont use sub when byte is not CHAR
-2. read file and print file content on the screen
-3. solve AOC day 1 problem
+  - read file and print file content on the screen
+    - compare with C code for reading a file
+  - solve AOC day 1 problem
+  - compare line by line implementation of "If Else" block written by the complier
+
+## TWO's Complement Reminders
+  - (~B) + 1 
+  - apply two's complement before adding two numbers with neg
+
+## Floating point Reminders
+
+
+## 6502 Architecture Misc.
+  - SBC requires Carry to correctly handle minus

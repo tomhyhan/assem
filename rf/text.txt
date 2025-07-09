@@ -1,0 +1,2 @@
+hello from text file
+2nd line

@@ -11,6 +11,7 @@
 	.importzp	tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4
 	.macpack	longbranch
 	.forceimport	__STARTUP__
+	.import		_fclose
 	.import		_fgetc
 	.import		_fopen
 	.import		_printf
@@ -18,11 +19,9 @@
 
 .segment	"RODATA"
 
-S0003:
-	.byte	$D2,$45,$41,$44,$49,$4E,$47,$20,$46,$49,$4C,$45,$20,$0D,$00
 S0001:
-	.byte	$54,$45,$58,$54,$2E,$54,$58,$54,$00
-S0004:
+	.byte	$54,$54,$54,$2E,$54,$58,$54,$00
+S0003:
 	.byte	$25,$43,$00
 S0002:
 	.byte	$52,$00
@@ -46,29 +45,32 @@ S0002:
 	jsr     _fopen
 	ldy     #$02
 	jsr     staxysp
-	lda     #<(S0003)
+	jmp     L0004
+L0002:	lda     #<(S0003)
 	ldx     #>(S0003)
 	jsr     pushax
-	ldy     #$02
-	jmp     L0006
-L0002:	lda     #<(S0004)
-	ldx     #>(S0004)
-	jsr     pushax
-	ldy     #$05
-	jsr     pushwysp
-	ldy     #$04
-L0006:	jsr     _printf
 	ldy     #$03
 	jsr     ldaxysp
+	jsr     pushax
+	ldy     #$04
+	jsr     _printf
+L0004:	ldy     #$03
+	jsr     ldaxysp
 	jsr     _fgetc
-	jsr     stax0sp
+	ldy     #$00
+	jsr     staxysp
 	cpx     #$FF
-	bne     L0002
+	bne     L0005
 	cmp     #$FF
-	bne     L0002
-	inx
-	txa
-	rts
+L0005:	jsr     boolne
+	jne     L0002
+	ldy     #$03
+	jsr     ldaxysp
+	jsr     _fclose
+	ldx     #$00
+	lda     #$00
+	jmp     L0001
+L0001:	rts
 
 .endproc
 

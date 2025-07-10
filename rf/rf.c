@@ -2,21 +2,15 @@
 #include <stdlib.h> // For exit()
 
 int main() {
-    FILE *filePointer;
-    char buffer[64]; // Buffer to store each line
+  FILE *filePointer;
+  int ch;
 
-    filePointer = fopen("text.txt", "r");
+  filePointer = fopen("ttt.txt", "r");
 
-    if (filePointer == NULL) {
-        perror("Error opening file");
-        return 1;
-    }
+  while ((ch = fgetc(filePointer)) != EOF) {
+      printf("%c", ch);
+  }
 
-    printf("Reading file line by line:\n");
-    while (fgets(buffer, sizeof(buffer), filePointer) != NULL) {
-        printf("%s", buffer);
-    }
-
-    fclose(filePointer);
-    return 0;
+  fclose(filePointer);
+  return EXIT_SUCCESS;
 }

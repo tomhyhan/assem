@@ -6,6 +6,7 @@ OPEN(open a file): $FFC0
 CLOSE(close a file): $FFC3
 
 ## COMMANDS
+```text
 *** compile example ***
 cl65 -o file.prg -u __EXEHDR__ -g -d -Ln hello.lbl -t c64 -m hello.map -C c64-asm.cfg hello.s
 
@@ -14,6 +15,13 @@ x64sc
 
 // attach without run?
 sc -moncommands hello.lbl file.prg
+
+*** create dick ***
+~/fun/Vice/bin/c1541.exe -format "mydisk,id" d64 mydisk.d64
+~/fun/Vice/bin/c1541.exe -attach mydisk.d64 -write rf -write text.txt
+
+```
+
 
 ## 6502 ASSEMBLY
 

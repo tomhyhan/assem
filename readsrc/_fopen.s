@@ -5,7 +5,7 @@
 ; /* Open the specified file and fill the descriptor values into f */
 ;
 
-        .export         __fopen
+       .export         __fopen
 
         .import         _open
         .import         pushax, incsp4, return0

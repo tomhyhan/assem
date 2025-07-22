@@ -5,7 +5,7 @@
 .include        "errno.inc"
 
 .import         curunit
-.importzp       c_sp, ptr1, tmp1, tmp2, tmp3
+.importzp       c_sp, ptr1, ptr2, ptr3, tmp1, tmp2, tmp3
 .autoimport on
 
 
@@ -20,7 +20,9 @@ MODE:
   fnunit:         .res    1
   fnlen:          .res    1
   fnisfile:       .res    1
-
+  c:              .res    1
+  unit:           .res    1
+  
 .data
   fnbuf:          .res    35
 
@@ -38,9 +40,77 @@ MODE:
   jsr pushax
   lda #<MODE
   ldx #>MODE
-  jsr _fopen
+  jsr _fopen ;returns pointer to file structure/table
+
 .endproc
 
+; ########## READ CHAR ##########
+
+.proc _fgetc
+  sta ptr1
+  stx ptr1+1
+  jsr pushax
+
+do_read:
+  ldy #_FILE::f_fd
+  lda (ptr1),y
+  jsr pusha0
+
+  lda #<c
+  ldx #>c_sp
+  jsr pushax
+
+  lda #$01
+  ldx #$00
+
+  ; int read (int fd, void* buf, unsigned count);
+  jsr _read
+
+.endproc
+
+.proc _read
+  ;pop params, pt2: cnt, pt1: buffer, A: handle
+  jsr rwcommon
+
+  adc #LFN_OFFS
+  tax
+  lda fdtab-LFN_OFFS,x
+  tay
+  and #LFN_READ
+
+  tya
+  bmi eof
+
+  ldy unittab-LFN_OFFS,X
+  sty unit
+
+  jsr CHKIN
+  bcc @L3
+
+;"here"
+@L0:
+  brk
+
+@L3:
+  dec ptr2
+  bne @L0
+  dec ptr2+1
+  bne @L0
+  beq done
+
+done:
+  brk
+
+eof:
+  lda #0
+  sta ___oserror
+  lda ptr3
+  ldx ptr3+1
+  rts
+
+
+.endproc
+; ########## READ FILE ##########
 ; _fopen
 .proc _fopen
   jsr pushax

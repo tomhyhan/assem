@@ -4,16 +4,31 @@
 .include        "filedes.inc"
 .include        "errno.inc"
 
-.import         curunit
-.importzp       c_sp, ptr1, ptr2, ptr3, tmp1, tmp2, tmp3
+.fopt		compiler,"cc65 v 2.19 - Git 29f7ab380"
+	.setcpu		"6502"
+	.smart		on
+	.autoimport	on
+	.case		on
+	.importzp	c_sp, sreg, regsave, regbank
+	.importzp	tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4
+;.import         curunit
+;.importzp       c_sp, ptr1, ptr2, ptr3, tmp1, tmp2, tmp3
+.macpack longbranch
 .autoimport on
+.forceimport	__STARTUP__
+.import _fclose
+.import _fgetc
+.import printf
 
+.export _main
 
 .segment "RODATA"
 FILENAME:
   .byte $4D,$59,$54,$45,$58,$54,$2E,$54,$58,$54,$00
 MODE:
   .byte $52,$00
+S0003:
+	.byte	$25,$43,$00
 
 .bss
   file:           .res    2
@@ -27,12 +42,12 @@ MODE:
   fnbuf:          .res    35
 
 .segment "CODE"
-.proc  main
+.proc  _main: near
   ; init stack
-  lda #$FF
-  ldx #$CF
-  sta c_sp
-  stx c_sp+1
+  ;lda #$FF
+  ;ldx #$CF
+  ;sta c_sp
+  ;stx c_sp+1
 
   jsr decsp4
   lda #<FILENAME
@@ -41,75 +56,151 @@ MODE:
   lda #<MODE
   ldx #>MODE
   jsr _fopen ;returns pointer to file structure/table
-
+	ldy     #$02
+	jsr     staxysp
+	jmp     L0004
+L0002:	lda     #<(S0003)
+	ldx     #>(S0003)
+	jsr     pushax
+	ldy     #$03
+	jsr     ldaxysp
+	jsr     pushax
+	ldy     #$04
+	jsr     _printf
+L0004:	ldy     #$03
+	jsr     ldaxysp
+	jsr     _fgetc
+	ldy     #$00
+	jsr     staxysp
+	cpx     #$FF
+	bne     L0005
+	cmp     #$FF
+L0005:	jsr     boolne
+	bne     L0002
+	ldy     #$03
+	jsr     ldaxysp
+	jsr     _fclose
+	ldx     #$00
+	lda     #$00
+	jmp     L0001
+L0001:	rts 
 .endproc
 
 ; ########## READ CHAR ##########
 
-.proc _fgetc
-  sta ptr1
-  stx ptr1+1
-  jsr pushax
+; .proc _fgetc
+;   sta ptr1
+;   stx ptr1+1
+;   jsr pushax
 
-do_read:
-  ldy #_FILE::f_fd
-  lda (ptr1),y
-  jsr pusha0
+; do_read:
+;   ldy #_FILE::f_fd
+;   lda (ptr1),y
+;   jsr pusha0
 
-  lda #<c
-  ldx #>c_sp
-  jsr pushax
+;   lda #<c
+;   ldx #>c_sp
+;   jsr pushax
 
-  lda #$01
-  ldx #$00
+;   lda #$01
+;   ldx #$00
 
-  ; int read (int fd, void* buf, unsigned count);
-  jsr _read
+;   ; int read (int fd, void* buf, unsigned count);
+;   jsr _read
 
-.endproc
+;   jsr incsp2
+;   ldx #$00
+;   lda c
+;   rts
 
-.proc _read
-  ;pop params, pt2: cnt, pt1: buffer, A: handle
-  jsr rwcommon
+; .endproc
 
-  adc #LFN_OFFS
-  tax
-  lda fdtab-LFN_OFFS,x
-  tay
-  and #LFN_READ
+; .proc _read
+;   ;pop params, ptr2: cnt, ptr1: buffer, A: handle
+;   jsr rwcommon
 
-  tya
-  bmi eof
+;   adc #LFN_OFFS
+;   tax
+;   lda fdtab-LFN_OFFS,x
+;   tay
+;   and #LFN_READ
 
-  ldy unittab-LFN_OFFS,X
-  sty unit
+;   tya
+;   bmi eof
 
-  jsr CHKIN
-  bcc @L3
+;   ldy unittab-LFN_OFFS,X
+;   sty unit
 
-;"here"
-@L0:
-  brk
+;   jsr CHKIN
+;   bcc @L3
 
-@L3:
-  dec ptr2
-  bne @L0
-  dec ptr2+1
-  bne @L0
-  beq done
+; @L0:
+;   jsr BASIN
+;   sta tmp1
+;   ldx unit
+;   bne @L0_1
+;   cmp #$0D
+;   bne @L0_1
+;   jsr BSOUT
 
-done:
-  brk
+; @L0_1:
+;   jsr READST
+;   sta tmp3
+;   and #%10111111
+;   bne devnotpresent
 
-eof:
-  lda #0
-  sta ___oserror
-  lda ptr3
-  ldx ptr3+1
-  rts
+;   ldy #0
+;   lda tmp1
+;   sta (ptr1),y
+;   inc ptr1
+;   bne @L1
+;   inc ptr1+1
 
+; @L1:
+;   inc ptr3
+;   bne @L2
+;   inc ptr3+1
 
-.endproc
+; @L2:    
+;   lda     tmp3
+;   and     #%01000000
+;   bne     @L4   
+
+; @L3:
+;   dec ptr2
+;   bne @L0
+;   dec ptr2+1
+;   bne @L0
+;   beq done
+
+; @L4:
+;   ldx tmp2
+;   lda #LFN_EOF
+;   ora fdtab,X
+;   sta fdtab,x
+
+; done:
+;   jsr CLRCH
+
+; eof:
+;   lda #0
+;   sta ___oserror
+;   lda ptr3
+;   ldx ptr3+1
+;   rts
+
+; devnotpresent:
+;   lda     #ENODEV
+;   .byte   $2C             ; Skip next opcode via BIT <abs>
+
+; ; Error entry: The given file descriptor is not valid or not open
+
+; invalidfd:
+;   lda     #EBADF
+;   jmp     ___directerrno  ; Sets _errno, clears __oserror, returns -1
+
+; .endproc
+
 ; ########## READ FILE ##########
 ; _fopen
 .proc _fopen

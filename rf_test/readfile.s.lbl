@@ -1,0 +1,16 @@
+al 00085A .__BSS_LOAD__
+al 00085A .__BSS_RUN__
+al 000000 .__BSS_SIZE__
+al 000001 .__EXEHDR__
+al 000001 .__LOADADDR__
+al 000000 .__ZP_FILEOFFS__
+al 000002 .__ZP_LAST__
+al 0000FE .__ZP_SIZE__
+al 000002 .__ZP_START__
+al 00083D .end_of_file
+al 00082B .read_loop
+al 000846 .error
+al 00080D .main
+al 00084F .filename
+al 00080D .Start
+al 00080B .Next

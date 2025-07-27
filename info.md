@@ -22,7 +22,6 @@ sc -moncommands hello.lbl file.prg
 
 ```
 
-
 ## 6502 ASSEMBLY
 
 *** addressing ***
@@ -58,6 +57,9 @@ m (memory map)
     - compare with C code for reading a file
   - solve AOC day 1 problem
   - compare line by line implementation of "If Else" block written by the complier
+
+## Useful functions to implement
+  - mmap, atosl, putc, puts, newline, fputlong, putslong, findc, searchc
 
 ## TWO's Complement Reminders
   - (~B) + 1 

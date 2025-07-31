@@ -41,6 +41,7 @@ S0002:
 	ldx     #$00
 	lda     #$00
 	jsr     pushax
+  ; what happens when you want to allocate say 253 stack size?
 	jsr     decsp5
 	ldy     #$04
 L0002:	lda     M0001,y
@@ -58,7 +59,7 @@ L0002:	lda     M0001,y
 	jmp     L0005
 L0003:	lda     c_sp
 	ldx     c_sp+1
-	jsr     _atoi; here
+	jsr     _atoi; pass in char pointer(M0001) in A, X
 	ldy     #$05
 	jsr     addeqysp
 L0005:	lda     c_sp

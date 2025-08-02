@@ -58,6 +58,9 @@ m (memory map)
   - solve AOC day 1 problem
   - compare line by line implementation of "If Else" block written by the complier
 
+## END GOAL:
+  - build BOOT LOADER to init FPGA
+
 ## Useful functions to implement
   - mmap, atosl, putc, puts, newline, fputlong, putslong, findc, searchc
 

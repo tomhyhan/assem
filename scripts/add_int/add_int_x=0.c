@@ -3,16 +3,16 @@
 
 int main(void) {
   FILE *file;
-  long int x = 206104; 
+  int x = 0; 
   char line[5] = {};
 
   file = fopen("input.txt", "r");
 
   while (fgets(line, 5, file) != NULL) {
-    x += atol(line);
+    x += atoi(line);
   }
 
-  printf("%ld\n", x);
+  printf("%d\n", x);
 
   fclose(file);
 

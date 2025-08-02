@@ -15,7 +15,7 @@
 	.import		_fgets
 	.import		_fopen
 	.import		_printf
-	.import		_atoi
+	.import		_atol
 	.export		_main
 
 .segment	"RODATA"
@@ -23,7 +23,7 @@
 S0001:
 	.byte	$49,$4E,$50,$55,$54,$2E,$54,$58,$54,$00
 S0003:
-	.byte	$25,$44,$0D,$00
+	.byte	$25,$4C,$44,$0D,$00
 S0002:
 	.byte	$52,$00
 
@@ -38,10 +38,13 @@ S0002:
 .segment	"CODE"
 
 	jsr     decsp2
-	ldx     #$00
 	lda     #$00
-	jsr     pushax
-  ; what happens when you want to allocate say 253 stack size?
+	sta     sreg+1
+	lda     #$03
+	sta     sreg
+	lda     #$18
+	ldx     #$25
+	jsr     pusheax
 	jsr     decsp5
 	ldy     #$04
 L0002:	lda     M0001,y
@@ -53,24 +56,24 @@ L0002:	lda     M0001,y
 	jsr     pushax
 	lda     #<(S0002)
 	ldx     #>(S0002)
-	jsr     _fopen; return file stream
-	ldy     #$07
-	jsr     staxysp ; store file stream on stack
+	jsr     _fopen
+	ldy     #$09
+	jsr     staxysp
 	jmp     L0005
 L0003:	lda     c_sp
 	ldx     c_sp+1
-	jsr     _atoi; pass in char pointer(M0001) in A, X
+	jsr     _atol
 	ldy     #$05
-	jsr     addeqysp
+	jsr     laddeqysp
 L0005:	lda     c_sp
 	ldx     c_sp+1
-	jsr     pushax; save array address 9
-	ldx     #$00
-	lda     #$05; save len 
 	jsr     pushax
-	ldy     #$0C
-	jsr     ldaxysp; load file stream to A X
-	jsr     _fgets; returns array address in A X
+	ldx     #$00
+	lda     #$05
+	jsr     pushax
+	ldy     #$0E
+	jsr     ldaxysp
+	jsr     _fgets
 	cpx     #$00
 	bne     L0006
 	cmp     #$00
@@ -79,12 +82,12 @@ L0006:	jsr     boolne
 	lda     #<(S0003)
 	ldx     #>(S0003)
 	jsr     pushax
-	ldy     #$08
-	jsr     ldaxysp
-	jsr     pushax
-	ldy     #$04
+	ldy     #$0A
+	jsr     ldeaxysp
+	jsr     pusheax
+	ldy     #$06
 	jsr     _printf
-	ldy     #$08
+	ldy     #$0A
 	jsr     ldaxysp
 	jsr     _fclose
 	ldx     #$00

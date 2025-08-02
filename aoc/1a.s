@@ -9,9 +9,14 @@
 .import init_stack
 .import decspy
 .import pushax
+.import fget_line
+.import pusheax
+.import laddeqsp
+.import strToInt
 
 ; data
 .importzp a_sp
+.importzp hreg
 
 
 .segment	"RODATA"
@@ -39,7 +44,13 @@ curnum:  .res 4
   jsr open_channel
 
   jsr init_stack
-  
+
+  lda #$00
+  sta hreg+1
+  sta hreg
+  ldx #$00
+  jsr pusheax
+
   ldy #$07
   jsr decspy
 
@@ -50,25 +61,41 @@ fill_zero:
   dey
   bpl fill_zero
 
+read_line:
   lda a_sp
   ldx a_sp+1
-  pushax
+  jsr pushax
   lda #$07
   ldx #$00
   jsr fget_line ; push stack pointer and len 
-  
-  ; 1234
 
-  ;1 2 3 4
+  cmp #$0d
+  beq new_line
 
-  ;1000 200 30 4
+  pha
+  lda a_sp
+  ldx a_sp+1
+  jsr strToInt 
+  ldy #$07
+  jsr laddeqsp
+  pla
 
+  cmp #$00
+  beq read_end
+  ; jmp read_line
+
+new_line:
+  ; create another variable ans
+  ; compare ans to x
+  ; save bigger number to ans
+  ; jmp back to read_line
+read_end:
 
   ; ldy #$00
   ; sty prevnum
   ; sty curnum
 
-  jsr output_char
+  ; jsr output_char
   jsr close_channel
   jsr close_file
   rts

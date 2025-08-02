@@ -20,20 +20,28 @@ EOF_BIT = %01000000
 .export decspy
 .export init_stack
 .export decspy
-.export a_sp
 .export fget_line
 .export pushax
+.export pusheax
 .export popax
+.export laddeqsp
+.export strToInt
+
+.export a_sp
+.export hreg
 
 .zeropage
 a_sp:  .res 2
 hreg:  .res 2
 sl:    .res 1
+ptr1:  .res 2
+ptr2:  .res 2
 
 .segment "BSS"
-fnlen: .res 1
-buf:   .res 2
-size:  .res 2
+fnlen:    .res 1
+buf:      .res 2
+size:     .res 2
+didread:  .res 1
 
 .segment "RODATA"
 filename: .byte "input.txt", 0
@@ -45,33 +53,42 @@ filename: .byte "input.txt", 0
   sta size
   stx size+1
 
-  popax
+  jsr popax
   sta ptr1
   stx ptr1+1
   sta buf
   stx buf+1
 
   ldy #$00
+  sty didread
 read_loop:
   dec size
   beq done
 
   jsr read_char
-  
-  jsr READST
-  and #EOF_BIT
-  bne done
 
   ldy #$00
   sta (ptr1),y
   inc ptr1
-  
-  cmp #'\n'
+
+  jsr READST
+  and #EOF_BIT
+  bne eof 
+
+  cmp #$0D
   beq done
+
   bne read_loop
 
 done:
+  ; add null terminator to mock C string?
+  lda #$FF
   rts
+
+eof:
+  lda #$00
+  rts
+
 .endproc
 
 .proc read_file
@@ -176,6 +193,25 @@ notborrow:
   rts
 .endproc
 
+.proc pusheax
+  pha
+  ldy #$04
+  jsr decspy
+  ldy #$03
+  lda hreg+1
+  sta (a_sp),y
+  dey
+  lda hreg
+  sta (a_sp),y
+  dey
+  txa
+  sta (a_sp),y
+  dey
+  pla
+  sta (a_sp),y
+  rts
+.endproc
+
 .proc popax
   ldy #$01
   lda (a_sp),y
@@ -195,7 +231,106 @@ hzero: inc a_sp+1
   rts
 .endproc
 
-;##########  OP ##########
+.proc laddeqsp
+  ; know y already
+  clc
+  adc (a_sp),y
+  sta (a_sp),y
+  pha
+  iny
+  txa
+  adc (a_sp),y
+  sta (a_sp),y
+  tax
+  iny
+  lda hreg
+  adc (a_sp),y
+  sta (a_sp),y
+  sta hreg
+  iny
+  lda hreg+1
+  adc (a_sp),y
+  sta (a_sp),y
+  sta hreg+1
+  pla
+  rts
+.endproc
+;########## CAST OP ##########
+.proc strToInt
+  sta ptr1
+  stx ptr1+1
+  ldy #$00
+  sty ptr2
+  sty ptr2+1
+  sty hreg
+  sty hreg+1
+
+cast_int:
+  lda (ptr1),y
+  sec
+  sbc #'0'
+  tax
+  cmp #$0a
+  bcs done
+
+  ;mul 10
+  jsr mul2
+  lda hreg+1
+  pha
+  lda hreg
+  pha
+  lda ptr2+1
+  pha
+  lda ptr2
+  pha
+
+  jsr mul2
+  jsr mul2
+
+  clc
+  pla
+  adc ptr2
+  sta ptr2
+  pla
+  adc ptr2+1
+  sta ptr2+1
+  pla
+  adc hreg
+  sta hreg
+  pla
+  adc hreg+1
+  sta hreg+1
+
+  ;add num
+  txa
+  clc
+  adc ptr2
+  sta ptr2
+  bcc next_char
+  inc ptr2+1
+  bne next_char
+  inc hreg
+  bne next_char
+  inc hreg+1
+
+next_char:
+  iny
+  bne cast_int 
+
+done:
+  lda ptr2
+  ldx ptr2+1
+  rts
+
+mul2:
+  asl ptr2
+  rol ptr2+1
+  rol hreg
+  rol hreg+1
+  rts
+
+.endproc
+
 ;##########  OP ##########
 
 

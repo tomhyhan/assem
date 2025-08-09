@@ -11,21 +11,7 @@
 	.importzp	tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4
 	.macpack	longbranch
 	.forceimport	__STARTUP__
-	.import		_fclose
-	.import		_fgets
-	.import		_fopen
-	.import		_printf
-	.import		_atol
 	.export		_main
-
-.segment	"RODATA"
-
-S0001:
-	.byte	$49,$4E,$50,$55,$54,$2E,$54,$58,$54,$00
-S0003:
-	.byte	$25,$4C,$44,$0D,$00
-S0002:
-	.byte	$52,$00
 
 ; ---------------------------------------------------------------
 ; int __near__ main (void)
@@ -37,68 +23,44 @@ S0002:
 
 .segment	"CODE"
 
-	jsr     decsp2
 	lda     #$00
 	sta     sreg+1
-	lda     #$03
+	lda     #$00
 	sta     sreg
-	lda     #$18
-	ldx     #$25
-	jsr     pusheax
-	jsr     decsp5
-	ldy     #$04
-L0002:	lda     M0001,y
-	sta     (c_sp),y
-	dey
-	bpl     L0002
-	lda     #<(S0001)
-	ldx     #>(S0001)
-	jsr     pushax
-	lda     #<(S0002)
-	ldx     #>(S0002)
-	jsr     _fopen
-	ldy     #$09
-	jsr     staxysp
-	jmp     L0005
-L0003:	lda     c_sp
-	ldx     c_sp+1
-	jsr     _atol
-	ldy     #$05
-	jsr     laddeqysp
-L0005:	lda     c_sp
-	ldx     c_sp+1
-	jsr     pushax
+	lda     #$00
 	ldx     #$00
+	jsr     pusheax ;a 
+	lda     #$00
+	sta     sreg+1
+	lda     #$00
+	sta     sreg
 	lda     #$05
-	jsr     pushax
-	ldy     #$0E
-	jsr     ldaxysp
-	jsr     _fgets
-	cpx     #$00
-	bne     L0006
-	cmp     #$00
-L0006:	jsr     boolne
-	jne     L0003
-	lda     #<(S0003)
-	ldx     #>(S0003)
-	jsr     pushax
-	ldy     #$0A
-	jsr     ldeaxysp
-	jsr     pusheax
-	ldy     #$06
-	jsr     _printf
-	ldy     #$0A
-	jsr     ldaxysp
-	jsr     _fclose
 	ldx     #$00
+	jsr     pusheax ;x
+	ldy     #$03
+	jsr     ldeaxysp
+	jsr     pusheax ;push x to stack
+	ldy     #$0B
+	jsr     ldeaxysp ;load a
+	jsr     tosgteax
+	jeq     L0002
+	ldy     #$03
+	jsr     ldeaxysp
+	ldy     #$04
+	jsr     steaxysp
+	jmp     L0003
+L0002:	lda     #$00
+	sta     sreg+1
+	lda     #$00
+	sta     sreg
+	lda     #$01
+	ldx     #$00
+	ldy     #$04
+	jsr     steaxysp
+L0003:	ldx     #$00
 	lda     #$00
 	jmp     L0001
 L0001:	rts
-
-.segment	"RODATA"
-
-M0001:
-	.res	5,$00
 
 .endproc
 

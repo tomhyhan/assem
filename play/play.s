@@ -3,9 +3,12 @@ vr: .byte $05
 
 .segment "CODE"
 .proc main
-  dec vr
-  bne @L1
-  jmp @L2  
+  lda #50
+  sec
+  sbc #130
+  eor #$FF 
+  brk
+  bcs @L2
 
 @L1:
   ldx #$FF

@@ -13,6 +13,10 @@
 .import pusheax
 .import laddeqsp
 .import strToInt
+.import lcmp
+.import boolgt
+.import ldeaxysp
+.import steaxysp
 
 ; data
 .importzp a_sp
@@ -51,6 +55,12 @@ curnum:  .res 4
   ldx #$00
   jsr pusheax
 
+  lda #$00
+  sta hreg+1
+  sta hreg
+  ldx #$00
+  jsr pusheax
+
   ldy #$07
   jsr decspy
 
@@ -67,10 +77,15 @@ read_line:
   jsr pushax
   lda #$07
   ldx #$00
+  ;TODO: figure out why it save at cff2 instead of cff0
   jsr fget_line ; push stack pointer and len 
 
+  pha
+  ldy #$00
+  lda (a_sp),y
   cmp #$0d
   beq new_line
+  pla
 
   pha
   lda a_sp
@@ -82,13 +97,29 @@ read_line:
 
   cmp #$00
   beq read_end
-  ; jmp read_line
+  jmp read_line
 
 new_line:
   ; create another variable ans
   ; compare ans to x
   ; save bigger number to ans
   ; jmp back to read_line
+  pla
+  ldy #$0a ; load x
+  jsr ldeaxysp
+  jsr pusheax
+  ldy #$12 ; load a
+  jsr ldeaxysp
+  jsr lcmp
+  jsr boolgt
+  beq lte
+  ldy #$0a
+  jsr ldeaxysp
+  ldy #$0b
+  jsr steaxysp
+lte:
+  jmp read_line
+
 read_end:
 
   ; ldy #$00

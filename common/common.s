@@ -17,7 +17,6 @@ EOF_BIT = %01000000
 .export close_channel
 .export read_char
 .export output_char
-.export decspy
 .export init_stack
 .export decspy
 .export fget_line
@@ -26,6 +25,10 @@ EOF_BIT = %01000000
 .export popax
 .export laddeqsp
 .export strToInt
+.export lcmp
+.export boolgt
+.export ldeaxysp
+.export steaxysp
 
 .export a_sp
 .export hreg
@@ -231,6 +234,20 @@ hzero: inc a_sp+1
   rts
 .endproc
 
+.proc addysp
+  ; already knows y
+  pha
+  tya
+  clc
+  adc a_sp
+  sta a_sp
+  bcc nocarry
+  inc a_sp+1 
+nocarry:
+  pla
+  rts
+.endproc
+
 .proc laddeqsp
   ; know y already
   clc
@@ -255,6 +272,38 @@ hzero: inc a_sp+1
   pla
   rts
 .endproc
+
+.proc ldeaxysp
+  ;knows y
+  lda (a_sp),y 
+  sta hreg+1 
+  dey
+  lda (a_sp),y
+  sta hreg
+  dey
+  lda (a_sp),y
+  tax
+  dey
+  lda (a_sp),y
+  rts
+.endproc
+
+.proc steaxysp
+  sta (a_sp),y
+  pha
+  txa
+  iny
+  sta (a_sp),y 
+  lda hreg
+  iny
+  sta (a_sp),y
+  lda hreg+1
+  iny
+  sta (a_sp),y
+  pla
+  rts
+.endproc
+
 ;########## CAST OP ##########
 .proc strToInt
   sta ptr1
@@ -331,8 +380,70 @@ mul2:
 
 .endproc
 
-;##########  OP ##########
+;##########  boolean OP ##########
+.proc lcmp
+  ; load a
+  sta ptr1
+  stx ptr1+1
 
+  ldy #$03
+  lda (a_sp),y
+  sec
+  sbc hreg+1
+  bne highbit
 
+  dey
+  lda (a_sp),y
+  cmp hreg
+  bne lowbit
 
+  dey
+  lda (a_sp),y
+  sec
+  sbc ptr1+1
+  bne lowbit
 
+  dey
+  lda (a_sp),y
+  sec
+  sbc ptr1
+
+lowbit:
+  php
+  ldy #$04
+  jsr addysp
+  plp
+  beq equal
+  bcs positive
+  lda #$FF ;negative (-1)
+equal:
+  rts
+positive:
+  lda #$01
+  rts
+
+highbit:
+  bvc nooverflow
+  eor #$FF ; overflow flag is lying
+           ; so fix N flag if overflow 
+  ora #$01
+nooverflow:
+  php
+  ldy #$04
+  jsr addysp
+  plp
+  rts
+.endproc
+
+.proc boolgt
+  beq eq
+  bpl gt
+eq:
+  ldx #$00
+  txa
+  rts
+gt:
+  ldx #$00
+  lda #$01
+  rts
+.endproc

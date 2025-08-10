@@ -74,12 +74,15 @@ read_loop:
   sta (ptr1),y
   inc ptr1
 
-  jsr READST
-  and #EOF_BIT
-  bne eof 
-
-  cmp #$0D
+  cmp #$0a
   beq done
+
+  pha
+  jsr READST
+  ; and #EOF_BIT
+  and #%01000000 
+  bne eof 
+  pla
 
   bne read_loop
 

@@ -80,23 +80,20 @@ read_line:
   ;TODO: figure out why it save at cff2 instead of cff0
   jsr fget_line ; push stack pointer and len 
 
-  pha
+  cmp #$00
+  beq read_end
+
   ldy #$00
   lda (a_sp),y
   cmp #$0d
   beq new_line
-  pla
 
-  pha
   lda a_sp
   ldx a_sp+1
   jsr strToInt 
   ldy #$07
   jsr laddeqsp
-  pla
 
-  cmp #$00
-  beq read_end
   jmp read_line
 
 new_line:
@@ -104,7 +101,6 @@ new_line:
   ; compare ans to x
   ; save bigger number to ans
   ; jmp back to read_line
-  pla
   ldy #$0a ; load x
   jsr ldeaxysp
   jsr pusheax
@@ -118,6 +114,13 @@ new_line:
   ldy #$0b
   jsr steaxysp
 lte:
+  ;x=0 dump fix it
+  ldy #$0a
+  lda #$00
+fill_zero1:
+  sta (a_sp), y
+  dey
+  bpl fill_zero1
   jmp read_line
 
 read_end:

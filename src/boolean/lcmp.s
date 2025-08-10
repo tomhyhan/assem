@@ -47,7 +47,6 @@ L3:     lda     #$01            ; Clear the N flag
 
 L4:     bvc     L5
         eor     #$FF            ; Fix the N flag if overflow
-                                ; overflow flag is lying
         ora     #$01            ; Clear the Z flag
 L5:     php                     ; Save flags
         jsr     incsp4          ; Drop TOS

@@ -92,6 +92,7 @@ done:
   rts
 
 eof:
+  pla
   lda #$00
   rts
 
@@ -308,6 +309,10 @@ nocarry:
 .endproc
 
 ;########## CAST OP ##########
+.proc hexToInt
+  rts
+.endproc
+
 .proc strToInt
   sta ptr1
   stx ptr1+1

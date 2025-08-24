@@ -1,10 +1,13 @@
 #include <stdio.h>
 
 int main() {
-  long int x[3];
   int i;
-  for (i=1; i < 3; i++) {
-    x[0] += x[i];
+  // int j;
+
+  for (i=0; i < 3; i++) {
+    // for (j=0; j < 3; j ++) {
+
+    // }
   }
-  return 1;
+  return 0;
 }

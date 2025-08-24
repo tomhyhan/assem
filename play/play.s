@@ -23,10 +23,9 @@
 
 .segment	"CODE"
 
-	ldy     #$0E
-	jsr     subysp
+	jsr     decsp2
 	ldx     #$00
-	lda     #$01
+	lda     #$00
 	ldy     #$00
 	jsr     staxysp
 L0002:	ldy     #$01
@@ -40,24 +39,15 @@ L0006:	asl     a
 	lda     #$00
 	ldx     #$00
 	rol     a
-	jne     L0005
+	jne     L0004
 	jmp     L0003
-L0005:	ldy     #$01
-	jsr     ldaxysp
-	jsr     aslax2
-	jsr     incax2
-	jsr     leaaxsp
-	ldy     #$03
-	jsr     ldeaxidx
-	ldy     #$02
-	jsr     laddeqysp
-	ldy     #$00
+L0004:	ldy     #$00
 	ldx     #$00
 	lda     #$01
 	jsr     addeqysp
 	jmp     L0002
 L0003:	ldx     #$00
-	lda     #$01
+	lda     #$00
 	jmp     L0001
 L0001:	rts
 

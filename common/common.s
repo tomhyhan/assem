@@ -29,9 +29,14 @@ EOF_BIT = %01000000
 .export boolgt
 .export ldeaxysp
 .export steaxysp
+.export inceaxy
+
+; print op
+.export print_hex
 
 .export a_sp
 .export hreg
+.export buf_size
 
 .zeropage
 a_sp:  .res 2
@@ -39,12 +44,14 @@ hreg:  .res 2
 sl:    .res 1
 ptr1:  .res 2
 ptr2:  .res 2
+ptr4:  .res 2
 
 .segment "BSS"
 fnlen:    .res 1
 buf:      .res 2
 size:     .res 2
 didread:  .res 1
+buf_size: .res 1
 
 .segment "RODATA"
 filename: .byte "input.txt", 0
@@ -52,7 +59,7 @@ filename: .byte "input.txt", 0
 .segment "CODE"
 ;########## FILE OP ##########
 
-.proc fget_line
+.proc fget_line ; line pointer and len
   sta size
   stx size+1
 
@@ -88,12 +95,23 @@ read_loop:
 
 done:
   ; add null terminator to mock C string?
+  jsr get_buf_size
+  dec buf_size
+  dec buf_size ; get rid of newline
   lda #$FF
   rts
 
 eof:
+  jsr get_buf_size
   pla
   lda #$00
+  rts
+
+get_buf_size:
+  lda ptr1
+  sec
+  sbc buf
+  sta buf_size
   rts
 
 .endproc
@@ -308,6 +326,22 @@ nocarry:
   rts
 .endproc
 
+.proc inceaxy
+  ; know y (value to add)
+  sty ptr4
+  clc
+  adc ptr4
+  bcc ret
+  inx
+  bne ret
+  inc hreg
+  bne ret
+  inc hreg+1
+
+ret:
+  rts
+.endproc
+
 ;########## CAST OP ##########
 .proc hexToInt
   rts
@@ -453,5 +487,42 @@ eq:
 gt:
   ldx #$00
   lda #$01
+  rts
+.endproc
+
+;##########  print OP ##########
+.proc print_hex
+  ; knows x and y
+loop:
+  lda (a_sp), y
+  pha
+  lsr A
+  lsr A
+  lsr A
+  lsr A
+  jsr print
+
+  pla
+  and #$0f
+  jsr print
+
+  dey
+  dex
+  bpl loop
+  rts
+
+print:
+  cmp #$0a
+  bcc is_digit
+
+is_letter:
+  adc #$36
+  jmp output
+
+is_digit:
+  ora #$30
+
+output:
+  jsr output_char
   rts
 .endproc

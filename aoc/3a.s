@@ -85,12 +85,18 @@ add2x:
   sta tmp
 
   ldy #X_E
-  jsr ldaxysp
+  jsr ldeaxysp
 
   ldy tmp
   jsr inceaxy
   ldy #X_S
   jsr steaxysp
+
+  lda read_flag
+  cmp #$00
+  beq read_done
+
+  jmp read_line
 
 read_done:
 

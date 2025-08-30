@@ -4,6 +4,8 @@
 .importzp hreg
 .importzp ptr1
 
+; 3 pointers
+; first, mid, end
 
 X_S       = $40
 X_E       = $43
@@ -11,9 +13,13 @@ LINE_SIZE = $40
 
 .data
 read_flag: .byte 1
-i: .byte 1
-j: .byte 1
 tmp: .byte 1
+line: .res 64, $00
+
+.zeropage
+pfirst: .res 2
+pmid: .res 2
+pend: .res 2
 
 .code
 .proc main
@@ -39,37 +45,50 @@ read_line:
   jsr fget_line
   sta read_flag
 
-  lda #$00
-  sta i
-  sta j
+  lda #<line
+  ldx #>line
+  jsr set_ptr
+  jsr copyline
 
   lsr buf_size
 
+  lda pfirst
+  ldx pfirst+1
+
+  ; set mid
+  jsr pos_ptr
+  sta pmid
+  stx pmid+1
+
+  ; set end
+  jsr pos_ptr
+  sta pend
+  stx pend+1
+
 read_first_half:
-  ldy i
-  lda (a_sp), y
+  lda pmid
+  ldx pmid+1
+  sta ptr1
+  stx ptr1+1
+
+  ldy #$00
+  lda (pfirst),y
   tax
+
 read_second_half:
-  lda j
-  clc
-  adc buf_size
-  tay
   txa
-  cmp (a_sp), y
+  cmp (ptr1),y
   beq match_found
 
-  inc j
-  lda j
-  cmp buf_size
-  bcs first_half_done
+  inc ptr1
+  lda ptr1
+  cmp pend
+  beq first_half_done
 
   jmp read_second_half
 
 first_half_done:
-  ; look at how compiler does this
-  lda #$00
-  sta j
-  inc i
+  inc pfirst
   jmp read_first_half
 
 match_found:
@@ -106,4 +125,28 @@ read_done:
   jsr close_channel
   jsr close_file
   rts
+
+set_ptr:
+  sta pfirst
+  stx pfirst+1
+
+copyline:
+  ldy #$00
+putc_loop:
+  lda (a_sp),y
+  sta (pfirst),y
+
+  iny
+  cpy buf_size
+  bne putc_loop  
+  rts
+
+pos_ptr:
+  clc
+  adc buf_size
+  bcc nocarry
+  inx
+nocarry:
+  rts
+
 .endproc

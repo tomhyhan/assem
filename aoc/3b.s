@@ -4,8 +4,8 @@
 .importzp hreg
 .importzp ptr1
 
-X_S       = $c0
-X_E       = $c3
+X_S       = $40
+X_E       = $43
 LINE_SIZE = $40
 
 .data
@@ -33,33 +33,37 @@ third: .res 64, $00
   ldy #LINE_SIZE
   jsr decspy
 
+read3:
   jsr read_line
   lda #<first
-  sta ptr1
-  lda #>first
-  sta ptr1+1
+  ldx #>first
+  jsr set_ptr
   jsr copy_line
 
   jsr read_line
   lda #<second
-  sta ptr1
-  lda #>second
-  sta ptr1+1
+  ldx #>second
+  jsr set_ptr
   jsr copy_line
 
   jsr read_line
   lda #<third
-  sta ptr1
-  lda #>third
-  sta ptr1+1
+  ldx #>third
+  jsr set_ptr
   jsr copy_line
-
 
 first_loop:
   ldy i
   lda first,y
   second_loop:
     ldy j
+
+    tax
+    lda #$00
+    cmp second,y
+    beq loop_end
+    txa
+
     cmp second,y
     beq third_loop
 
@@ -70,6 +74,13 @@ first_loop:
 
   third_loop:
     ldy k
+
+    tax
+    lda #$00
+    cmp third,y
+    beq loop_end
+    txa
+
     cmp third,y
     beq match_found
 
@@ -106,8 +117,8 @@ add2x:
   cmp #$00
   beq read_done
 
-  ; WRONG
-  ; jmp read_line
+  jsr reset_vars
+  jmp read3
 
 read_done:
   ldy #X_E
@@ -136,6 +147,47 @@ put_char:
   iny
   cpy buf_size
   bne put_char
+  rts
+
+reset_vars:
+  lda #$00
+  sta i
+  sta j
+  sta k
+
+  lda #<first
+  ldx #>first
+  jsr set_ptr
+  jsr put0_loop
+
+  lda #<second
+  ldx #>second
+  jsr set_ptr
+  jsr put0_loop
+
+  lda #<third
+  ldx #>third
+  jsr set_ptr
+  jsr put0_loop
+
+  rts
+
+put0_loop:
+  ldy #$00
+put0:
+  lda (ptr1),y
+  cmp #$00
+  beq end_put0
+  lda #$00
+  sta (ptr1),y
+  iny
+  jmp put0
+end_put0:
+  rts
+
+set_ptr:
+  sta ptr1
+  stx ptr1+1
   rts
 
 .endproc

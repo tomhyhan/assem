@@ -44,6 +44,7 @@ hreg:  .res 2
 sl:    .res 1
 ptr1:  .res 2
 ptr2:  .res 2
+ptr3:  .res 2
 ptr4:  .res 2
 
 .segment "BSS"

@@ -33,7 +33,7 @@ L0002:	ldy     #$01
 	cmp     #$03
 	txa
 	sbc     #$00
-	bvc     L0006
+	bvc     L0006 ;Branch on oVerflow Clear
 	eor     #$80
 L0006:	asl     a
 	lda     #$00

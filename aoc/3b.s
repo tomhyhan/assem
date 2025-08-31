@@ -3,20 +3,26 @@
 .importzp a_sp
 .importzp hreg
 .importzp ptr1
+.importzp ptr2
 
 X_S       = $40
 X_E       = $43
 LINE_SIZE = $40
 
 .data
-read_flag: .byte 0
-i: .byte 0
-j: .byte 0
-k: .byte 0
-tmp: .byte 0
-first: .res 64, $00
-second: .res 64, $00
-third: .res 64, $00
+read_flag:  .byte 0
+tmp:        .byte 0
+; i is in buffers 
+i:          .byte 0
+buffers:
+  first: .res 64, $00
+  second: .res 64, $00
+  third: .res 64, $00
+
+.zeropage
+pfirst: .res 2
+psecond: .res 2
+pthird: .res 2
 
 .code
 .proc main
@@ -34,65 +40,117 @@ third: .res 64, $00
   jsr decspy
 
 read3:
+read_loop:
   jsr read_line
+  lda i
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a
+  asl a
+
+  clc
+  adc #<buffers
+  pha
+  lda #>buffers
+  bcs nocarry
+  adc #$00
+nocarry:
+  tax
+  pla
+  jsr set_ptr
+  jsr copy_line
+  
+  inc i 
+  sta i
+  cmp #$03
+  bne read_loop
+
+debug:
+
+  ; jsr read_line
+  ; lda #<first
+  ; ldx #>first
+  ; jsr set_ptr
+  ; jsr copy_line
+
+  ; jsr read_line
+  ; lda #<second
+  ; ldx #>second
+  ; jsr set_ptr
+  ; jsr copy_line
+
+  ; jsr read_line
+  ; lda #<third
+  ; ldx #>third
+  ; jsr set_ptr
+  ; jsr copy_line
+
   lda #<first
   ldx #>first
-  jsr set_ptr
-  jsr copy_line
+  sta pfirst
+  stx pfirst+1
 
-  jsr read_line
   lda #<second
   ldx #>second
-  jsr set_ptr
-  jsr copy_line
+  sta psecond
+  stx psecond+1
 
-  jsr read_line
   lda #<third
   ldx #>third
-  jsr set_ptr
-  jsr copy_line
+  sta pthird
+  stx pthird+1
 
-first_loop:
-  ldy i
-  lda first,y
-  second_loop:
-    ldy j
+; first_loop:
+;   lda psecond
+;   ldx psecond+1
+;   sta ptr1
+;   stx ptr1+1
 
-    tax
-    lda #$00
-    cmp second,y
-    beq loop_end
-    txa
+;   lda pthird
+;   ldx pthird+1
+;   sta ptr2
+;   stx ptr2+1
 
-    cmp second,y
-    beq third_loop
+;   ldy #$00
+;   lda (pfirst),y
+;   tax
+;   second_loop:
+;     txa
+;     cmp (ptr1),y
+;     beq loop_end
+;     txa
 
-    inc j
-    jmp second_loop
+;     cmp second,y
+;     beq third_loop
+
+;     inc j
+;     jmp second_loop
   
-  jmp loop_end
+;   jmp loop_end
 
-  third_loop:
-    ldy k
+;   third_loop:
+;     ldy k
 
-    tax
-    lda #$00
-    cmp third,y
-    beq loop_end
-    txa
+;     tax
+;     lda #$00
+;     cmp third,y
+;     beq loop_end
+;     txa
 
-    cmp third,y
-    beq match_found
+;     cmp third,y
+;     beq match_found
 
-    inc k
-    jmp third_loop
+;     inc k
+;     jmp third_loop
 
-loop_end:
-  inc i
-  lda #$00
-  sta j
-  sta k
-  jmp first_loop
+; loop_end:
+;   inc i
+;   lda #$00
+;   sta j
+;   sta k
+;   jmp first_loop
 
 match_found:
   cmp #$61
@@ -117,7 +175,6 @@ add2x:
   cmp #$00
   beq read_done
 
-  jsr reset_vars
   jmp read3
 
 read_done:
@@ -147,29 +204,6 @@ put_char:
   iny
   cpy buf_size
   bne put_char
-  rts
-
-reset_vars:
-  lda #$00
-  sta i
-  sta j
-  sta k
-
-  lda #<first
-  ldx #>first
-  jsr set_ptr
-  jsr put0_loop
-
-  lda #<second
-  ldx #>second
-  jsr set_ptr
-  jsr put0_loop
-
-  lda #<third
-  ldx #>third
-  jsr set_ptr
-  jsr put0_loop
-
   rts
 
 put0_loop:

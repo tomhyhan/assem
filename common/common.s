@@ -37,15 +37,17 @@ EOF_BIT = %01000000
 .export a_sp
 .export hreg
 .export buf_size
+.export read_flag
 
 .zeropage
-a_sp:  .res 2
-hreg:  .res 2
-sl:    .res 1
-ptr1:  .res 2
-ptr2:  .res 2
-ptr3:  .res 2
-ptr4:  .res 2
+a_sp:       .res 2
+hreg:       .res 2
+sl:         .res 1
+ptr1:       .res 2
+ptr2:       .res 2
+ptr3:       .res 2
+ptr4:       .res 2
+read_flag:  .res 1
 
 .segment "BSS"
 fnlen:    .res 1
@@ -100,12 +102,14 @@ done:
   dec buf_size
   dec buf_size ; get rid of newline
   lda #$FF
+  sta read_flag
   rts
 
 eof:
   jsr get_buf_size
   pla
   lda #$00
+  sta read_flag
   rts
 
 get_buf_size:

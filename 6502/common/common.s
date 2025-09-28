@@ -11,6 +11,11 @@ CLOSE   = $FFC3   ; Args: Logical num
 
 EOF_BIT = %01000000
 
+
+; memory op
+.export mmap
+.export file_pt
+; file op
 .export read_file
 .export close_file
 .export open_channel
@@ -31,13 +36,19 @@ EOF_BIT = %01000000
 .export steaxysp
 .export inceaxy
 
+
 ; print op
 .export print_hex
 
-.export a_sp
-.export hreg
 .export buf_size
-.export read_flag
+
+.exportzp a_sp
+.exportzp hreg
+.exportzp read_flag
+.exportzp r13
+.exportzp r11
+
+LINE_SIZE = $50
 
 .zeropage
 a_sp:       .res 2
@@ -48,6 +59,8 @@ ptr2:       .res 2
 ptr3:       .res 2
 ptr4:       .res 2
 read_flag:  .res 1
+r13:        .res 2
+r11:        .res 2
 
 .segment "BSS"
 fnlen:    .res 1
@@ -58,9 +71,141 @@ buf_size: .res 1
 
 .segment "RODATA"
 filename: .byte "input.txt", 0
+file_memory: .res 8192, 0
+
+.segment "DATA"
+file_pt: .word file_memory
 
 .segment "CODE"
+;########## SEARCH OP ##########
+.proc search
+
+;TODO: implement it
+search_loop:
+  ; cmp 
+
+  inc file_pt
+  bne nc3
+  inc file_pt+1
+nc3:
+
+
+  rts
+.endproc
+
+
+;########## MEMORY OP ##########
+.proc mmap
+  jsr read_file
+  jsr open_channel
+  jsr init_stack
+
+  ldy #LINE_SIZE
+  jsr decspy
+
+  lda file_pt
+  ldx file_pt+1
+  sta ptr3
+  stx ptr3+1
+
+read_line:
+  lda a_sp
+  ldx a_sp+1
+  jsr pushax
+  lda #LINE_SIZE
+  ldx #$00
+  jsr fget_line_mmap
+
+  lda a_sp
+  ldx a_sp+1
+  sta ptr2
+  stx ptr2+1
+
+  ldy #$00
+  ldx #$00
+copy_char:
+  cpx buf_size
+  beq check_file_end
+
+  lda (ptr2),y
+  sta (ptr3),y
+
+  inc ptr3
+  bne nc1
+  inc ptr3+1
+nc1:
+  inc ptr2
+  bne nc2
+  inc ptr2+1
+nc2:
+  inx
+  jmp copy_char
+
+check_file_end:
+  lda read_flag
+  cmp #$00
+  beq read_done
+  jmp read_line
+
+read_done:
+  jsr close_channel
+  jsr close_file
+  rts
+.endproc
+
 ;########## FILE OP ##########
+.proc fget_line_mmap ; line pointer and len
+  sta size
+  stx size+1
+
+  jsr popax
+  sta ptr1
+  stx ptr1+1
+  sta buf
+  stx buf+1
+
+read_loop:
+  dec size
+  beq done
+
+  jsr read_char
+
+  ldy #$00
+  sta (ptr1),y
+  inc ptr1
+
+  pha
+  jsr READST
+  ; and #EOF_BIT
+  and #%01000000 
+  bne eof 
+  pla
+
+  bne read_loop
+
+done:
+  ; add null terminator to mock C string?
+  jsr get_buf_size
+  lda #$FF
+  sta read_flag
+  rts
+
+eof:
+  jsr get_buf_size
+  pla
+  lda #$00
+  sta read_flag
+  rts
+
+get_buf_size:
+  lda ptr1
+  sec
+  sbc buf
+  sta buf_size
+  rts
+
+.endproc
+
 
 .proc fget_line ; line pointer and len
   sta size

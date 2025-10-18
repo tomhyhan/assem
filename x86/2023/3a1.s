@@ -1,9 +1,18 @@
-%define accumulator r15
+extern put_long, put_newline, mmap, find_char
+
+; used for parsing
+%define num_len r15
+%define curr r12
+%define currCell r13
+%define parsed rbx
+
 %define end_of_file [rsp + 0 * 8]
 %define size [rsp + 1 * 8]
-%define curr r12
+
+; used for adding nums
 %define x r13
 %define y r14
+%define accumulator r15
 %define sizer r12
 
 section .text
@@ -16,27 +25,169 @@ _start:
   sub rsp, 2*8
 
   mov curr, rax
-  lea end_of_file, [rax+rdx]
+  lea rdi, [rax+rdx]
+  mov end_of_file, rdi
 
 ; get num of cols
   mov rdi, curr
   mov sil, 0x0a
   call find_char
-  
+
+  sub rax, rdi
   mov size, rax 
 
   mov rdi, size
   add rdi, 2
   imul rdi, rdi
-  imul rdi ; alloc word for each slot
+  imul rdi, 2 ; alloc word for each slot
+  mov r14, rdi
   call alloc ; now you are working with heap
 
+  mov parsed, rax
+
+  mov rdi, rax
+  mov rcx, r14
+  mov al, 0
+  rep stosb
+
+  ; mov top and left padding
+  add parsed, size
+  add parsed, size
+  add parsed, 6
+
+  mov currCell, parsed
+.loop:
+  cmp byte [curr], 0x0a
+  jne .not_newline
+
+  add currCell, 4
+  inc curr
+
+  jmp .continue_loop
+
+.not_newline:
+  cmp byte [curr], '.'
+  jne .not_dot
+
+  add currCell, 2
+  inc curr
+
+  jmp .continue_loop
+
+.not_dot:
+  mov dil, [curr]
+  call is_num
+  test al, al
+  jz .not_number
+
+  ; it is a num: save num
+  mov rdi, curr
+  call search_right_num
+
+  mov num_len, rax
+  sub num_len, curr
+
+  mov rdi, curr
+  mov rsi, rax
+  call atol
+
+.store_loop:
+  mov [currCell], ax
+
+  add currCell, 2
+  inc curr
+
+  dec num_len
+  test num_len, num_len
+  jnz .store_loop
+
+  jmp .continue_loop
+
+.not_number: ; it must be symbol
+  mov al, [curr]
+  movzx ax, al
+  or ax, 0x8000
+  mov [currCell], ax 
+  inc curr
+  add currCell, 2
+
+.continue_loop:
+  cmp curr, end_of_file
+  jl .loop
+
+; traverse grid
+
+  mov accumulator, 0
+  mov sizer, size
+
+  mov y, 0
+.y_loop:
+  mov x, 0
+
+.x_loop:
+  bt word [parsed], 15
+  jnc .not_symbol
+
+.debug:
+  ; left
+  movzx rax, word [parsed-2]
+  add accumulator, rax
+  ; right
+  movzx rax, word [parsed+2]
+  add accumulator, rax
+  mov rdi, sizer
+  neg rdi
+  ; top
+  movzx rax, word [parsed + rdi * 2 - 4]
+  add accumulator, rax
+  ; bottom
+  movzx rax, word [parsed + sizer * 2 + 4]
+  add accumulator, rax
+
+  mov ax, word [parsed + rdi * 2 - 4]
+  test ax, ax
+  jnz .skip_top
+
+  ; top left
+  movzx rax, word [parsed + rdi * 2 - 6]
+  add accumulator, rax
+  ; top right
+  movzx rax, word [parsed + rdi * 2 - 2]
+  add accumulator, rax
+
+.skip_top:
+  mov ax, word [parsed + sizer * 2 + 4]
+  test ax, ax
+  jnz .skip_bottom
+  ; bottom left
+  movzx rax, word [parsed + sizer * 2 + 2]
+  add accumulator, rax
+  ; bottom right
+  movzx rax, word [parsed + sizer * 2 + 6]
+  add accumulator, rax
+
+.skip_bottom:
+.not_symbol:
+  inc x
+  add parsed, 2
+
+  cmp x, sizer
+  jl .x_loop
+
+  inc y
+  add parsed, 4
+
+  cmp y, sizer
+  jl .y_loop
 
 .end:
+  mov rdi, accumulator
+  call put_long
+  call put_newline
+
   mov rax, 60
   mov rdi, 0
   syscall
-
 
 alloc:
   ; align memory to 16 bytes
@@ -48,96 +199,43 @@ alloc:
   add rsi, 16 
 
 .nopad:
-  cmp [oldbrk], 0
-  jne .brk_exist
+  cmp qword [oldbrk], 0
+  jne .has_brk
 
   mov rax, 12
   mov rdi, 0
   syscall
 
-  jmp .map
+  jmp .gotbrk
 
-.brk_exist:
+.has_brk:
   mov rax, [oldbrk]
 
-.map:
-
-  mov rdi, rax
+.gotbrk:
+  lea rdi, [rax+rsi]
+  mov rsi, rax
   mov rax, 12
-  add rdi, rsi
   syscall
 
+  mov [oldbrk], rax
+
+  mov rax, rsi
   ret
 
-put_newline:
-  mov dil, 0x0a
-  mov [rsp-1], dil
-
-  mov rax, 1
-  mov rdi, 1
-  lea rsi, [rsp-1]
-  mov rdx, 1
-  syscall
-
-  ret
-
-put_long:
-  mov rax, accumulator
-  mov rdi, rsp
-  mov rsi, 10
-.loop:
-  test rax, rax
-  jz .end
-
-  dec rdi
-
-  mov rdx, 0
-  div rsi
-
-  add dl, '0'
-  mov [rdi], dl
-
-  jmp .loop
-
-.end:
-  mov rax, 1
-  mov rsi, rdi
-  mov rdi, 1
-  mov rdx, rsp
-  sub rdx, rsi
-  syscall
-
-  ret
-
-  
-add_num:
-  mov rsi, curr_char
-  call search_left_num
-
-  mov rsi, rax; rax: left most num
-  call search_right_num
-  mov rdi, rsi
-  mov rsi, rdx
-  call atol
-
-debug:
-  add accumulator, rax
-  call put_long
-  call put_newline
-  ret
 
 search_right_num:
-  mov rdx, rsi
+  mov rsi, rdi
 .loop:
-  mov dil, [rdx]
+  mov dil, [rsi]
   call is_num
   test al, al
   je .end
   
-  inc rdx
+  inc rsi
   jmp .loop
 
 .end:
+  mov rax, rsi
   ret
 
 atol:
@@ -189,43 +287,7 @@ is_num:
 .end:
   ret
 
-find_char:
-  mov rax, rdi
-.loop:
-  cmp sil, [rax]
-  jge .end
-
-  inc rax
-  jmp .loop
-.end:
-  ret
-
-mmap:
-  ; read file
-  mov rax, 2
-  mov rsi, 0
-  syscall
-
-  ; fstat
-  mov rdi, rax
-  mov rax, 5
-  mov rsi, statbuf
-  syscall
-
-  ; mmap
-  mov r8, rdi   ; fd
-  mov rax, 9
-  mov rdi, 0 ; address
-  mov rsi, [statbuf+48]   ; length
-  mov rdx, 3   ; prot
-  mov r10, 2   ; flags
-  mov r9,  0    ; offset
-  syscall
-
-  mov rdx, [statbuf+48]
-  ret
 
 section .bss
-  statbuf: resb 144
   oldbrk: resq 1
 

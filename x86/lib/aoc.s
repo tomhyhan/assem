@@ -1,4 +1,6 @@
 ; allocate memory
+; rdi = file string
+; returns void
 global mmap:function
 mmap:
   ; open a file
@@ -12,6 +14,7 @@ mmap:
   mov rsi, statbuf
   syscall
 
+  ; mmap
   mov r8, rdi  ; fd
   mov rax, 9 
   mov rdi, 0; addr
@@ -25,9 +28,48 @@ mmap:
   
   ret
 
-; find matching char and return address
-; rdi: current address
-; sil: char (byte) to find 
+; is current character a number?
+; dil: current char
+; returns 0 or 1
+global is_num:function
+is_num:
+  mov al, 0
+  cmp dil, '0'
+  jl .end
+  cmp dil, '9'
+  jg .end
+  mov al, 1
+.end:
+  ret
+
+; convert string to num
+; rdi = current char
+; rsi = last char
+; returns number
+global atol:function
+atol:
+  mov rax, 0
+
+.loop:
+  cmp rdi, rsi
+  jge .end
+
+  imul rax, 10
+
+  mov cl, [rdi]
+  sub cl, '0'
+  movzx rcx, cl
+  add rax, rcx
+
+  inc rdi
+  jmp .loop
+.end:
+  ret
+
+; find matching char 
+; rdi = current address
+; sil =  char (byte) to find 
+; returns address
 global find_char:function
 find_char:
   mov rax, rdi
@@ -42,6 +84,7 @@ find_char:
 
 ; print number on screen
 ; rdi: num in hex
+; return void
 global put_long:function
 put_long:
   mov rax, rdi
@@ -72,7 +115,8 @@ put_long:
 
   ret
 
-; add new line
+; add new line on screen
+; returns void
 global put_newline:function
 put_newline:
   mov dil, 0x0a
@@ -85,6 +129,14 @@ put_newline:
   syscall
 
   ret
+
+; exit program successfully
+global exit_sucess:function
+exit_sucess:
+  mov rax, 60
+  mov rdi, 0
+  syscall
+  
 
 section .bss
   statbuf resb 144

@@ -1,4 +1,4 @@
-extern put_long, put_newline, mmap, find_char, atol, is_num
+extern put_long, put_newline, mmap, find_char, atol, is_num, exit_sucess
 
 ; used for parsing
 %define num_len r15
@@ -8,49 +8,49 @@ extern put_long, put_newline, mmap, find_char, atol, is_num
 
 %define end_of_file [rsp + 0 * 8]
 %define size [rsp + 1 * 8]
+%define cnt [rsp + 2 * 8]
 
 ; used for adding nums
 %define x r13
 %define y r14
 %define accumulator r15
 %define sizer r12
+%define sub_mul r12
 
-section .text
 global _start:function
-
 _start:
   mov rdi, [rsp+16]
   call mmap
-
-  sub rsp, 2*8
 
   mov curr, rax
   lea rdi, [rax+rdx]
   mov end_of_file, rdi
 
-; get num of cols
+  sub rsp, 3*8;
+
   mov rdi, curr
   mov sil, 0x0a
   call find_char
 
-  sub rax, rdi
-  mov size, rax 
+  mov size, rax
+  sub size, curr
 
   mov rdi, size
   add rdi, 2
   imul rdi, rdi
-  imul rdi, 2 ; alloc word for each slot
+  imul rdi, 2 ; allocate word for each cell
   mov r14, rdi
-  call alloc ; now you are working with heap
+  call alloc
 
   mov parsed, rax
 
+  ; fill 0
   mov rdi, rax
   mov rcx, r14
   mov al, 0
   rep stosb
 
-  ; mov top and left padding
+  ; skip first line and left padding
   add parsed, size
   add parsed, size
   add parsed, 6
@@ -62,8 +62,7 @@ _start:
 
   add currCell, 4
   inc curr
-
-  jmp .continue_loop
+  jmp .next_loop
 
 .not_newline:
   cmp byte [curr], '.'
@@ -71,8 +70,7 @@ _start:
 
   add currCell, 2
   inc curr
-
-  jmp .continue_loop
+  jmp .next_loop
 
 .not_dot:
   mov dil, [curr]
@@ -80,7 +78,6 @@ _start:
   test al, al
   jz .not_number
 
-  ; it is a num: save num
   mov rdi, curr
   call search_right_num
 
@@ -88,7 +85,7 @@ _start:
   sub num_len, curr
 
   mov rdi, curr
-  mov rsi, rax
+  lea rsi, [curr+num_len]
   call atol
 
 .store_loop:
@@ -98,128 +95,111 @@ _start:
   inc curr
 
   dec num_len
-  test num_len, num_len
-  jnz .store_loop
 
-  jmp .continue_loop
+  cmp num_len, 0
+  jne .store_loop
 
-.not_number: ; it must be symbol
-  mov al, [curr]
-  movzx ax, al
-  or ax, 0x8000
-  mov [currCell], ax 
-  inc curr
+  jmp .next_loop
+
+.not_number:
+  cmp byte [curr], '*'
+  jne .not_star
+
+  or word [currCell], 0x8000
+
   add currCell, 2
+  inc curr
 
-.continue_loop:
+.not_star:
+  add currCell, 2
+  inc curr
+
+.next_loop:
   cmp curr, end_of_file
   jl .loop
 
-; traverse grid
-
-  mov accumulator, 0
   mov sizer, size
 
+  mov accumulator, 0
   mov y, 0
 .y_loop:
   mov x, 0
-
 .x_loop:
   bt word [parsed], 15
-  jnc .not_symbol
+  jnc .end
 
-.debug:
+  mov sub_mul, 1
+  mov byte cnt, 0; count if number is found
+
   ; left
-  movzx rax, word [parsed-2]
-  add accumulator, rax
+  movzx rdi, word [parsed-2]
+  call mul_num
   ; right
-  movzx rax, word [parsed+2]
-  add accumulator, rax
-  mov rdi, sizer
-  neg rdi
-  ; top
-  movzx rax, word [parsed + rdi * 2 - 4]
-  add accumulator, rax
-  ; bottom
-  movzx rax, word [parsed + sizer * 2 + 4]
-  add accumulator, rax
+  movzx rdi, word [parsed+2]
+  call mul_num
 
-  mov ax, word [parsed + rdi * 2 - 4]
+  mov rsi, sizer
+  neg rsi
+
+  ; top
+  movzx rdi, word [parsed + rsi * 2 - 4]
+  call mul_num
+  ; bottom
+  movzx rdi, word [parsed + sizer * 2 + 4]
+  call mul_num
+  
+  mov ax, [parsed + rsi * 2 - 4]
   test ax, ax
   jnz .skip_top
 
   ; top left
-  movzx rax, word [parsed + rdi * 2 - 6]
-  add accumulator, rax
+  movzx rdi, word [parsed + rsi - 6]
+  call mul_num
   ; top right
-  movzx rax, word [parsed + rdi * 2 - 2]
-  add accumulator, rax
+  movzx rdi, word [parsed + rsi - 2]
+  call mul_num
 
-.skip_top:
-  mov ax, word [parsed + sizer * 2 + 4]
+  mov ax, [parsed + sizer + 4]
   test ax, ax
   jnz .skip_bottom
+
+.skip_top:
   ; bottom left
-  movzx rax, word [parsed + sizer * 2 + 2]
-  add accumulator, rax
+  movzx rdi, word [parsed + sizer + 2]
+  call mul_num
+
   ; bottom right
-  movzx rax, word [parsed + sizer * 2 + 6]
-  add accumulator, rax
+  movzx rdi, word [parsed + sizer + 6]
+  call mul_num
 
 .skip_bottom:
-.not_symbol:
+  cmp byte cnt, 2
+  jne .end
+  add accumulator, sub_mul
+
+.end:
   inc x
   add parsed, 2
-
   cmp x, sizer
   jl .x_loop
 
   inc y
   add parsed, 4
-
   cmp y, sizer
   jl .y_loop
 
-.end:
-  mov rdi, accumulator
   call put_long
   call put_newline
 
-  mov rax, 60
-  mov rdi, 0
-  syscall
+  call exit_sucess
 
-alloc:
-  ; align memory to 16 bytes
-  mov rsi, rdi
-  test rsi, 0xf
-  jz .nopad
+mul_num:
+  cmp rdi, 0
+  je .end
 
-  and rsi, ~0xf
-  add rsi, 16 
-
-.nopad:
-  cmp qword [oldbrk], 0
-  jne .has_brk
-
-  mov rax, 12
-  mov rdi, 0
-  syscall
-
-  jmp .gotbrk
-
-.has_brk:
-  mov rax, [oldbrk]
-
-.gotbrk:
-  lea rdi, [rax+rsi]
-  mov rsi, rax
-  mov rax, 12
-  syscall
-
-  mov [oldbrk], rax
-
-  mov rax, rsi
+  imul sub_mul, rax
+  inc byte cnt
+.end:
   ret
 
 
@@ -229,8 +209,8 @@ search_right_num:
   mov dil, [rsi]
   call is_num
   test al, al
-  je .end
-  
+  jz .end
+
   inc rsi
   jmp .loop
 
@@ -238,6 +218,37 @@ search_right_num:
   mov rax, rsi
   ret
 
+alloc:
+  mov rsi, rdi
+
+  test sil, 0x0f
+  jz .nopad
+
+  and rsi, ~0x0f
+  add rsi, 16
+
+.nopad:
+  cmp qword [oldbrk], 0
+  jne .has_brk
+
+  mov rax, 12
+  mov rdi, 0
+  syscall
+  
+  jmp .gotbrk
+
+.has_brk:
+  mov rax, [oldbrk]
+
+.gotbrk:
+  lea rdi, [rax+rsi]
+  mov rsi, rax 
+  mov rax, 12
+  syscall
+
+  mov [oldbrk], rax
+  mov rax, rsi 
+  ret
+
 section .bss
   oldbrk: resq 1
-

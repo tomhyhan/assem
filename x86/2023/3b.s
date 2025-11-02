@@ -8,25 +8,26 @@ extern put_long, put_newline, mmap, find_char, atol, is_num, exit_sucess
 
 %define end_of_file [rsp + 0 * 8]
 %define size [rsp + 1 * 8]
-%define cnt [rsp + 2 * 8]
+%define x [rsp + 2 * 8]
+%define y [rsp + 3 * 8]
 
 ; used for adding nums
-%define x r13
-%define y r14
+%define sub_mul r13
+%define cnt r14
 %define accumulator r15
 %define sizer r12
-%define sub_mul r12
 
 global _start:function
 _start:
   mov rdi, [rsp+16]
   call mmap
 
+  sub rsp, 4*8;
+
   mov curr, rax
   lea rdi, [rax+rdx]
   mov end_of_file, rdi
 
-  sub rsp, 3*8;
 
   mov rdi, curr
   mov sil, 0x0a
@@ -107,9 +108,6 @@ _start:
 
   or word [currCell], 0x8000
 
-  add currCell, 2
-  inc curr
-
 .not_star:
   add currCell, 2
   inc curr
@@ -121,15 +119,16 @@ _start:
   mov sizer, size
 
   mov accumulator, 0
-  mov y, 0
+  mov qword y, 0
 .y_loop:
-  mov x, 0
+  mov qword x, 0
 .x_loop:
   bt word [parsed], 15
   jnc .end
 
+.debug:
   mov sub_mul, 1
-  mov byte cnt, 0; count if number is found
+  mov qword cnt, 0; count if number is found
 
   ; left
   movzx rdi, word [parsed-2]
@@ -153,41 +152,42 @@ _start:
   jnz .skip_top
 
   ; top left
-  movzx rdi, word [parsed + rsi - 6]
+  movzx rdi, word [parsed + rsi * 2 - 6]
   call mul_num
   ; top right
-  movzx rdi, word [parsed + rsi - 2]
+  movzx rdi, word [parsed + rsi * 2 - 2]
   call mul_num
 
-  mov ax, [parsed + sizer + 4]
+.skip_top:
+  mov ax, [parsed + sizer * 2 + 4]
   test ax, ax
   jnz .skip_bottom
 
-.skip_top:
   ; bottom left
-  movzx rdi, word [parsed + sizer + 2]
+  movzx rdi, word [parsed + sizer * 2 + 2]
   call mul_num
 
   ; bottom right
-  movzx rdi, word [parsed + sizer + 6]
+  movzx rdi, word [parsed + sizer * 2 + 6]
   call mul_num
 
 .skip_bottom:
-  cmp byte cnt, 2
+  cmp cnt, 2
   jne .end
   add accumulator, sub_mul
 
 .end:
-  inc x
+  inc qword x
   add parsed, 2
   cmp x, sizer
   jl .x_loop
 
-  inc y
+  inc qword y
   add parsed, 4
   cmp y, sizer
   jl .y_loop
 
+  mov rdi, accumulator
   call put_long
   call put_newline
 
@@ -197,8 +197,8 @@ mul_num:
   cmp rdi, 0
   je .end
 
-  imul sub_mul, rax
-  inc byte cnt
+  imul sub_mul, rdi
+  inc cnt
 .end:
   ret
 

@@ -42,6 +42,37 @@ is_num:
 .end:
   ret
 
+
+global search_not_num:function
+search_not_num:
+  mov rsi, rdi
+.loop:
+  mov dil, [rsi]
+  call is_num
+  test al, al
+  jz .end
+
+  inc rsi
+  jmp .loop
+
+.end:
+  mov rax, rsi
+  ret
+
+
+global skip_space:function
+skip_space:
+  mov rax, rdi
+.loop:
+  cmp byte [rax], ' '
+  jne .end
+
+  inc rax
+  jmp .loop
+
+.end:
+  ret
+
 ; convert string to num
 ; rdi = current char
 ; rsi = last char

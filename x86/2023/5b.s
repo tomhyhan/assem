@@ -157,6 +157,8 @@ map_seed_value_range:
   cmp rax, rdx
   jl .no_split 
 
+  ; here do split
+
 .no_split:
   ; within range
   ; seed - dest + src 

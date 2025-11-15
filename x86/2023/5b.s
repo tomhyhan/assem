@@ -117,8 +117,8 @@ _start:
 
 map_seed_value:
 .loop:
-  mov rdi, array
-  mov rsi, map
+  mov rdi, map
+  mov rsi, array 
   call map_seed_value_range
 
   cmp array, array_end
@@ -139,25 +139,33 @@ map_seed_value_range:
 
   ; seed value
 
-  ; is within range?
-  mov rax, [array]
-  mov rdx, [map + 1 * 8]
+  ; is array bigger than dest?
+  mov rax, [rsi]
+  mov rdx, [rdi + 1 * 8]
   cmp rax, rdx
   jl .not_in_range
 
-  add rax, [map+16]
-  cmp rax, rcx
+  ; is array smaller than dest + range?
+  add rdx, [rdi + 2 * 8]
+  cmp rax, rdx
   jae .not_in_range
 
+  ; array is between dest and dest + range
   ; seed + seed_end < src + src_range
   ; no_split
-  
+  add rax, [rsi + 1 * 8]
+  cmp rax, rdx
   jl .no_split 
 
+.no_split:
   ; within range
   ; seed - dest + src 
-  sub rax, rsi
-  add rax, rdi
+  mov rax, [rsi]
+  sub rax, [rdi + 1 * 8]
+  add rax, [rdi + 8]
+  mov [rsi], rax
+  add rax, [rsi + 1 * 8]
+  mov [rsi + 1 * 8], rax
   jmp .end
 
 .not_in_range:

@@ -10,7 +10,7 @@ extern mmap, exit_sucess, search_not_num, atol
 ; 4. now add the card to accumulator
 %define curr r12
 %define end_of_file [rsp + 0 * 8]
-%define array_p
+%define array_p r13
 
 global _start:function
 _start:
@@ -25,6 +25,7 @@ _start:
 
 
   mov array_p, hands
+  mov rdi, hands ; debug
 .save_cards:
   call read_card  
   call read_card  
@@ -33,7 +34,7 @@ _start:
   call read_card  
 
   inc curr ; skip ' '
-  inc hand ; skip padding
+  inc array_p ; skip padding
 
   mov rdi, curr
   call search_not_num
@@ -42,15 +43,25 @@ _start:
   mov curr, rax
   call atol
 
-  mov word [array], ax
+  mov word [array_p], ax
 
-  add array, 2
+  add array_p, 2
 
   inc curr ; skip '\n'
   cmp curr, end_of_file
   jb .save_cards
 
 ; now sort!
+  mov rdi, hands ; start of hands
+  mov rsi, hands ; end of hands
+.find_array_end:
+  add rsi, 8
+
+  cmp rsi, 0
+  jne .find_array_end
+
+
+
   
   call exit_sucess
 
@@ -58,43 +69,44 @@ read_card:
   cmp byte [curr], 'A'
   jne .not_A
 
-  mov byte [array], 14
+  mov byte [array_p], 14
   jmp .end
 
 .not_A:
   cmp byte [curr], 'K'
   jne .not_K
 
-  mov byte [array], 13
+  mov byte [array_p], 13
   jmp .end
 
 .not_K:
   cmp byte [curr], 'Q'
   jne .not_Q
 
-  mov byte [array], 12
+  mov byte [array_p], 12
   jmp .end
 
 .not_Q:
   cmp byte [curr], 'J'
   jne .not_J
 
-  mov byte [array], 11
+  mov byte [array_p], 11
   jmp .end
 
 .not_J:
   cmp byte [curr], 'T'
   jne .not_T
 
-  mov byte [array], 10
+  mov byte [array_p], 10
   jmp .end
 
 .not_T:
   mov al, [curr]
-  mov byte [array], al
+  sub al, '0'
+  mov byte [array_p], al
 
 .end:
-  inc array
+  inc array_p
   inc curr
   ret
 

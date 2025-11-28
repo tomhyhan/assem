@@ -53,7 +53,7 @@ _start:
 ; src, dest, range
   mov array_end, seeds
 .get_seed_end:
-  cmp [array_end], 0
+  cmp  qword [array_end], 0
   je .loop_seeds
 
   add array_end, 16 
@@ -69,31 +69,37 @@ _start:
   mov map, seed_to_soil
   call map_seed_value
 
+  mov array, seeds
   mov map, soil_to_fertilizer
   call map_seed_value
 
+  mov array, seeds
   mov map, fertilizer_to_water
   call map_seed_value
 
+  mov array, seeds
   mov map, water_to_light
   call map_seed_value
 
+  mov array, seeds
   mov map, light_to_temperature
   call map_seed_value
 
+  mov array, seeds
   mov map, temperature_to_humidity
   call map_seed_value
 
+  mov array, seeds
   mov map, humidity_to_location
   call map_seed_value
 
   ; mov rdi, rax
   ; call put_long
   ; call put_newline
-  mov [array], rax
+  ; mov [array], rax
 
-  add array, 8
-  jmp .loop_seeds
+  ; add array, 8
+  ; jmp .loop_seeds
 
 .end_loop_seeds:
 
@@ -107,7 +113,7 @@ _start:
   cmp rax, rdi
   cmovl rdi, rax
 
-  add array, 8
+  add array, 16
   jmp .loop_min
 
 .end_loop_min:
@@ -137,8 +143,10 @@ map_seed_value_range:
   ; dest  [map + 1 * 8]
   ; range [map + 2 * 8]
 
-  ; seed value
+  cmp qword [map + 2 * 8], 0
+  je .end
 
+  ; seed value
   ; is array bigger than dest?
   mov rax, [rsi]
   mov rdx, [rdi + 1 * 8]
@@ -158,6 +166,13 @@ map_seed_value_range:
   jl .no_split 
 
   ; here do split
+  ; array end is now [seed, src + src_rage]
+  mov [rsi + 1 * 8], rdx
+
+  ; new seed : [src + src_range, (seed + seed_end )- (src+src_range)]
+  mov [array_end], rdx
+  sub rax, rdx
+  mov [array_end + 1 * 8], rax
 
 .no_split:
   ; within range
